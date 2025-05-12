@@ -341,7 +341,6 @@ export interface Position{
     y: number
 }
 
-
 export class Animation{
     startPropValues: number[]
     currentPropValues: number[]
