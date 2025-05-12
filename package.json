@@ -1,0 +1,25 @@
+{
+  "name": "canvaskitgame",
+  "version": "0.0.1",
+  "description": "Simple wrapper for html canvas with animation and event support",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "url": "https://github.com/leon554/CanvasKit"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "vite"
+  },
+  "keywords": [
+    "html canvas",
+    "html canvas wrapper"
+  ],
+  "author": "leon",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3"
+  }
+}
