@@ -1,5 +1,10 @@
 # **CanvasKit**
 CanvasKit is a light weight simple HTML Canvas wrapper which provides an simple interface to create complex graphics and dynamic scenes
+## Installation
+To use in your project run 
+```
+npm install canvaskitgame
+```
 
 ## **Features** 
 ### CanvasKit
