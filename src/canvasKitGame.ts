@@ -351,6 +351,17 @@ export class Animation{
     easingType: string = "linear"
     loop: boolean
     stepSize = 1
+    /**
+    * Creates a new animation object used to animate values such as "x", "y", "scale" and "rotation"
+    * 
+    *
+    * @param {number[]} currentPropValues - This contains all the current values of the atributes you want to animate
+    * @param {number[]} targetPropValues - This contains all the target values of the atributes you want to animate.
+    * @param {string[]} propNames - This is the names of the attributes you can animate they inculde: "x", "y", "scale" and "rotation"
+    * @param {string} easingType -This specifies the easing on the animation which can be either: "linear", "easeIn", "easeOut" or "easeInOut"
+    * @param {number} duration -The duration of the animation in seconds
+    * @param {boolean} loop -Specifies if the animation will loop or not
+    */
     constructor(currentPropValues: number[], targetPropValues: number[], propNames: string[], easingType: string = "linear", duration= 1, loop = false){
         this.currentPropValues = [...currentPropValues]
         this.startPropValues = [...currentPropValues]
