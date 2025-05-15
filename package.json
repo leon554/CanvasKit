@@ -1,6 +1,6 @@
 {
   "name": "canvaskitgame",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simple wrapper for html canvas with animation and event support",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
