@@ -1,12 +1,14 @@
 import { Color } from "./Color"
 import { HorizontalAllign, VerticleAllign, type CanvasKit } from "./canvasKit"
+import { Animation } from "./animation";
+import { Particle } from "./particle";
 
 
 export class CanvasKitGame{
-    shapes: Map<string, ShapeData> = new Map();
+    entities: Map<string, ShapeData> = new Map();
     frameCount: number = 0
     draw: CanvasKit
-    mousePosition: Position = {x: 0, y: 0}
+    mousePosition: Vector2D = {x: 0, y: 0}
     deltaTime: number = 0
     private previousFrameTime: number = 0
 
@@ -21,8 +23,8 @@ export class CanvasKitGame{
     * @param {string} tag - Tag of shape
     */
     removeShapeData(tag: string){
-        if(!this.shapes.has(tag)) return false
-        this.shapes.delete(tag)
+        if(!this.entities.has(tag)) return false
+        this.entities.delete(tag)
     }
     /**
     * Removes any animation object on a given shape
@@ -30,8 +32,9 @@ export class CanvasKitGame{
     * @param {string} tag - Tag of shape
     */
     removeAnimations(tag: string){
-        if(!this.shapes.has(tag)) return
-        this.shapes.get(tag)!._animations = []
+        if(!this.entities.has(tag)) return
+        if(this.entities.get(tag) instanceof Particle) return 
+        //this.entities.get(tag)!._animations = []
     }
     /**
     * Sets the z-index of a shape, shapes with a higher z-index will be rendered above shapes with a smaller z-index
@@ -39,13 +42,13 @@ export class CanvasKitGame{
     * @param {string} tag - Tag of shape 
     */
     setZIndex(tag: string, zIndex: number){
-        if(!this.shapes.has(tag)) return false
-        this.shapes.get(tag)!.z = zIndex
+        if(!this.entities.has(tag)) return false
+        this.entities.get(tag)!.z = zIndex
         this.sortZIndex()
     }
     private sortZIndex(){
-        this.shapes = new Map(
-        [...this.shapes.entries()].sort((entryA, entryB) => {
+        this.entities = new Map(
+        [...this.entities.entries()].sort((entryA, entryB) => {
             const a = entryA[1], b = entryB[1];
             return a.z - b.z;
         }));
@@ -59,7 +62,12 @@ export class CanvasKitGame{
     drawFrame(color: Color = new Color(0,0,0)){
         const timerStart = performance.now();
         this.draw.fillCanvas(color)
-        for(const sd of this.shapes.values()){
+        for(let sd of this.entities.values()){
+            if(sd instanceof Particle){
+                sd.step()
+                sd = sd.shape
+            }
+            if(sd instanceof Particle) continue
             if(!sd.show) continue
             switch (true){
                 case sd instanceof RectangleData:
@@ -92,7 +100,7 @@ export class CanvasKitGame{
     newRectangleData(tag: string, x: number, y: number, width: number = 50, height: number = 50, fill: boolean = true, 
         color: Color = new Color(255,255,255), rotationAngle: number = 0, scale: number = 1, borderWidth: number = 1){
         const rectangleData = new RectangleData(tag, x, y, width, height, fill, color, borderWidth, rotationAngle, scale)
-        this.shapes.set(tag, rectangleData) 
+        this.entities.set(tag, rectangleData) 
         this.sortZIndex()
         return rectangleData
     }
@@ -102,7 +110,7 @@ export class CanvasKitGame{
     newCircleData(tag: string, x: number, y: number, radius: number = 10, fill: boolean = true,
         color: Color = new Color(255,255,255),scale: number = 1, lineWidth: number = 1){
         const circleData = new CircleData(tag, x, y, radius, fill, color, scale, lineWidth);
-        this.shapes.set(tag, circleData)
+        this.entities.set(tag, circleData)
         this.sortZIndex()
         return circleData
     }
@@ -112,7 +120,7 @@ export class CanvasKitGame{
     newTextData(tag: string, x: number, y: number, text: string, fontSize: number = 10, color: Color = new Color(255,255,255),
         HorAllign: HorizontalAllign = HorizontalAllign.center, VertAllign: VerticleAllign = VerticleAllign.middle, rotationAngle: number = 1){
         const textData = new TextData(tag, x, y, text, fontSize, color, HorAllign, VertAllign, rotationAngle);
-        this.shapes.set(tag, textData)
+        this.entities.set(tag, textData)
         this.sortZIndex()
         return textData
     }
@@ -122,7 +130,7 @@ export class CanvasKitGame{
     newLineData(tag: string, sx: number, sy: number, ex: number, ey: number, lineThickness: number = 1,
         color: Color = new Color(255,255,255)){
         const lineData = new LineData(tag, sx, sy, ex, ey, lineThickness, color);
-        this.shapes.set(tag, lineData)
+        this.entities.set(tag, lineData)
         this.sortZIndex()
         return lineData
     }
@@ -134,16 +142,17 @@ export class CanvasKitGame{
         await this.draw.registerImage(filePath, tag)
         imageData.width = this.draw.images[tag].width
         imageData.height = this.draw.images[tag].height
-        this.shapes.set(tag, imageData)
+        this.entities.set(tag, imageData)
         this.sortZIndex()
         return imageData
     }
     private handleMouseMove(e: MouseEvent){
+        /*
         const rect = this.draw.canvas.getBoundingClientRect(); 
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         this.mousePosition = {x, y}
-        for(const shape of this.shapes.values()){
+        for(const shape of this.entities.values()){
             if(!shape.isPointInsideShape(this.mousePosition.x, this.mousePosition.y)){
                 shape._hoverState = (shape._hoverState == 2) ? 1 : 0
                 if(shape._hoverState == 1) shape.onHoverExit?.()
@@ -152,15 +161,18 @@ export class CanvasKitGame{
             shape.onHoverEnter?.()
             shape._hoverState = 2
         }
+            */
 
     }
     private handleMouseDown(_: MouseEvent){
-        for(const shape of this.shapes.values()){
+        for(const shape of this.entities.values()){
+            if(shape instanceof Particle) continue
             if(!shape.isPointInsideShape(this.mousePosition.x, this.mousePosition.y))continue
             shape.onClick?.()
         }
     }
     private handleAnimationStep(shape: ShapeData){
+        if(shape instanceof Particle) return
         if(!shape._animations) return
         if(shape._animations.length == 0) return
         if(shape._animations[0].isAnimationComplete()){
@@ -198,7 +210,13 @@ export class CanvasKitGame{
 }
 
 
-type ShapeData = RectangleData | CircleData | TextData | LineData | ImageData
+export type ShapeData = RectangleData | CircleData | TextData | LineData | ImageData | Particle
+export enum ShapeType {
+    RectangleData,
+    CircleData,
+    imageData,
+}
+
 abstract class BaseShapeData{
     x: number = 0
     y: number = 0
@@ -217,7 +235,7 @@ abstract class BaseShapeData{
     _hoverState: number = 0
     public abstract isPointInsideShape(x: number, y: number): boolean
 }
-class RectangleData extends BaseShapeData {
+export class RectangleData extends BaseShapeData {
     constructor(
         public tag: string,
         public x: number,
@@ -301,7 +319,7 @@ class LineData extends BaseShapeData{
         return false
     }
 }
-class ImageData extends BaseShapeData{
+export class ImageData extends BaseShapeData{
     public width: number = 0
     public height: number = 0
     constructor(
@@ -336,83 +354,9 @@ class ImageData extends BaseShapeData{
         );
     }
 }
-export interface Position{
+export interface Vector2D{
     x: number
     y: number
 }
 
-export class Animation{
-    startPropValues: number[]
-    currentPropValues: number[]
-    targetPropValues: number[]
-    propNames: string[]
-    elapsedTime: number = 0
-    duration: number = 1000
-    easingType: string = "linear"
-    loop: boolean
-    stepSize = 1
-    /**
-    * Creates a new animation object used to animate values such as "x", "y", "scale" and "rotation"
-    * 
-    *
-    * @param {number[]} currentPropValues - This contains all the current values of the atributes you want to animate
-    * @param {number[]} targetPropValues - This contains all the target values of the atributes you want to animate.
-    * @param {string[]} propNames - This is the names of the attributes you can animate they inculde: "x", "y", "scale" and "rotation"
-    * @param {string} easingType -This specifies the easing on the animation which can be either: "linear", "easeIn", "easeOut" or "easeInOut"
-    * @param {number} duration -The duration of the animation in seconds
-    * @param {boolean} loop -Specifies if the animation will loop or not
-    */
-    constructor(currentPropValues: number[], targetPropValues: number[], propNames: string[], easingType: string = "linear", duration= 1, loop = false){
-        this.currentPropValues = [...currentPropValues]
-        this.startPropValues = [...currentPropValues]
-        this.targetPropValues = [...targetPropValues]
-        this.propNames = [...propNames]
-        this.duration = duration * 1000
-        this.easingType = easingType
-        this.loop = loop
-    }
-    isAnimationComplete(){
-        return (Math.min(this.elapsedTime / this.duration, 1) >= 1)
-    }
-    step(deltaTime: number) {
-        this.elapsedTime += deltaTime;
 
-        const t = Math.min(this.elapsedTime / this.duration, 1); // Clamp between 0 and 1
-        let easedT = t
-        switch(this.easingType){
-            case "linear":
-                easedT = Animation.linear(t);
-            break;
-            case "easeIn":
-                easedT = Animation.easeIn(t)
-            break;
-            case "easeOut":
-                easedT = Animation.easeOut(t)
-            break;
-            case "easeInOut":
-                easedT = Animation.easeInOut(t)
-            break;
-        }
-        for(let i = 0;i < this.currentPropValues.length;i++){
-            this.currentPropValues[i] = this.startPropValues[i] + (this.targetPropValues[i] - this.startPropValues[i]) * easedT;
-        }
-
-        if (t >= 1) {
-            for(let i = 0;i < this.currentPropValues.length;i++){
-                this.currentPropValues[i] = this.targetPropValues[i] 
-            }
-        }
-    }
-    private static easeInOut(t: number): number {
-        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    }
-    private static easeIn(t: number): number {
-        return t * t;
-    }
-    private static easeOut(t: number): number {
-        return t * (2 - t);
-    }
-    private static linear(t: number): number {
-        return t;
-    }
-}
