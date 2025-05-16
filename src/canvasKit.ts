@@ -119,9 +119,11 @@ export class CanvasKit{
         this.ctx.save()
         let cx = x + width/2
         let cy = y + height/2
-        this.ctx.translate(cx, cy);
-        this.ctx.scale(scale, scale);
-        this.ctx.translate(-cx, -cy);
+        if(scale != 1){
+            this.ctx.translate(cx, cy);
+            this.ctx.scale(scale, scale);
+            this.ctx.translate(-cx, -cy);
+        }
         if(rotationAngle != 0){
             this.ctx.translate(cx, cy)
             this.ctx.rotate((rotationAngle*Math.PI)/180)
