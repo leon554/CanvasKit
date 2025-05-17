@@ -68,7 +68,6 @@ export class ParticleEmitter{
     }
     spawn(){
         const currentTime = Date.now()
-
         this.particles.forEach((p, i)=> {
             if(currentTime - p.timeCreated > p.lifeSpan * 1000){
                 p.active = false, p.shape.show = false, p.timeCreated = currentTime
