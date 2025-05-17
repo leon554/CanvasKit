@@ -267,7 +267,7 @@ export class RectangleData extends BaseShapeData {
         );
     }
 }
-class CircleData extends BaseShapeData{
+export class CircleData extends BaseShapeData{
     type: ShapeType = "circle"
     constructor(
         public tag: string,

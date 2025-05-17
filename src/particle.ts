@@ -1,4 +1,4 @@
-import { Vector2D, RectangleData, ShapeData, ShapeType, ImageData, CanvasKitGame } from "./canvasKitGame";
+import { Vector2D, RectangleData, ShapeData, ShapeType, ImageData, CanvasKitGame, CircleData } from "./canvasKitGame";
 import { Color } from "./Color";
 
 export class ParticleEmitter{
@@ -19,9 +19,12 @@ export class ParticleEmitter{
         this.ckg = ckg
         this.totalParticleCount = Math.min(particlesPerSec*particleProps.lifeSpan, 60*particleProps.lifeSpan)
         this.ckg.addFrameEvent(() => this.spawn())
-        this.loadParticles()
+        const load = async () => {
+            await this.loadParticles()
+        }
+        load()
     }
-    loadParticles(){
+    async loadParticles(){
         for(let i = 0; i < this.totalParticleCount; i++){
             let particleShape: ShapeData|null =  null
             if(this.particleProps.shapeType == "rectangle"){
@@ -29,12 +32,15 @@ export class ParticleEmitter{
             }else if(this.particleProps.shapeType == "circle"){
                 particleShape = this.ckg.newCircleData(this.getRandomTag(), this.postion.x, this.postion.y, this.particleProps.raduis, this.particleProps.fill, undefined)
             }
+            else if(this.particleProps.shapeType == "image"){
+                particleShape = await this.ckg.newImageData(this.getRandomTag(), this.particleProps.imageFilePath, this.postion.x, this.postion.y, 0.1, this.particleProps.rotationAngle)
+            }
             if(!particleShape) throw new Error("Shape type specified does not exist")
             if(!(particleShape instanceof ImageData)){
                 particleShape.color.setColor(this.particleProps.startColor)
             }
             
-            const {velocityVariation, velocity, gravity, angularVelocity, lifeSpan, startColor, endColor} = this.particleProps;
+            const {velocityVariation, velocity, gravity, angularVelocity, lifeSpan, startColor, endColor, startScale, endScale} = this.particleProps;
             const particle = new Particle({
                 shape: particleShape,
                 velocity: this.applyVariation(velocityVariation, velocity),
@@ -42,7 +48,9 @@ export class ParticleEmitter{
                 angularVelocity,
                 lifeSpan,
                 startColor,
-                endColor
+                endColor,
+                startScale,
+                endScale
             });
             this.particles.push(particle)
             this.ckg.entities.set(particleShape.tag, particleShape)
@@ -58,11 +66,13 @@ export class ParticleEmitter{
         newParticle.shape.x = this.postion.x
         newParticle.shape.y = this.postion.y
         newParticle.timeCreated = currentTime
+        
         newParticle.velocity = this.applyVariation(this.particleProps.velocityVariation, this.particleProps.velocity)
         if(!(newParticle.shape instanceof ImageData)){
-            newParticle.shape.color.r = newParticle.startColor.r
-            newParticle.shape.color.g = newParticle.startColor.g
-            newParticle.shape.color.b = newParticle.startColor.b
+            newParticle.shape.color.setColor(newParticle.shape.color)
+        }
+        if(newParticle.shape instanceof RectangleData || newParticle.shape instanceof ImageData || newParticle.shape instanceof CircleData){
+            newParticle.shape.scale = this.particleProps.startScale
         }
         this.incrementParicleIndex()
     }
@@ -93,6 +103,7 @@ export class ParticleEmitter{
 }
 export class ParticleEmitterProps {
     shapeType: ShapeType = "rectangle"
+    imageFilePath: string = ""
     x: number = 0;
     y: number = 0;
     width: number = 10;
@@ -107,6 +118,8 @@ export class ParticleEmitterProps {
     angularVelocity: number = 0;
     gravity: Vector2D = { x: 0, y: 0.1 };
     lifeSpan: number = 2;
+    startScale: number = 1
+    endScale: number = 2
 
     constructor(props: Partial<ParticleEmitterProps> = {}) {
         Object.assign(this, props);
@@ -120,6 +133,8 @@ type ParticleProps = {
     lifeSpan: number
     startColor: Color
     endColor: Color
+    startScale: number
+    endScale: number
 }
 export class Particle{
     velocity: Vector2D
@@ -132,6 +147,8 @@ export class Particle{
     z: number= 0
     startColor: Color
     endColor: Color
+    startScale: number
+    endScale: number
 
     constructor(particleProps: ParticleProps){
         this.shape = particleProps.shape
@@ -142,6 +159,8 @@ export class Particle{
         this.timeCreated = Date.now()
         this.startColor = particleProps.startColor
         this.endColor = particleProps.endColor
+        this.startScale = particleProps.startScale
+        this.endScale = particleProps.endScale
     }
 
     step(deltaTime: number){
@@ -152,9 +171,9 @@ export class Particle{
 
         this.velocity.x += this.gravity.x * deltaTime
         this.velocity.y += this.gravity.y * deltaTime
-        if(!(this.shape instanceof ImageData)){
-            const progress = Math.min(1, (Date.now() - this.timeCreated) / (this.lifeSpan * 1000));
 
+        const progress = Math.min(1, (Date.now() - this.timeCreated) / (this.lifeSpan * 1000));
+        if(!(this.shape instanceof ImageData)){
             this.shape.color.r = this.startColor.r + (this.endColor.r - this.startColor.r) * progress;
             this.shape.color.g = this.startColor.g + (this.endColor.g - this.startColor.g) * progress;
             this.shape.color.b = this.startColor.b + (this.endColor.b - this.startColor.b) * progress;
@@ -162,6 +181,9 @@ export class Particle{
 
         if(this.shape instanceof RectangleData || this.shape instanceof ImageData){
             this.shape.rotationAngle += this.angularVelocity
+        }
+        if(this.shape instanceof RectangleData || this.shape instanceof ImageData || this.shape instanceof CircleData){
+            this.shape.scale = this.startScale + (this.endScale - this.startScale) * progress
         }
 
     }
