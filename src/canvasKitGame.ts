@@ -11,6 +11,7 @@ export class CanvasKitGame{
     mousePosition: Vector2D = {x: 0, y: 0}
     deltaTime: number = 0
     onNewFrameEvents: Array<()=>void> = []
+    sortZOnNewShapeCreation: boolean = true
     private previousFrameTime: number = 0
 
     constructor(drawInstance: CanvasKit){
@@ -46,7 +47,7 @@ export class CanvasKitGame{
         this.entities.get(tag)!.z = zIndex
         this.sortZIndex()
     }
-    private sortZIndex(){
+    sortZIndex(){
         this.entities = new Map(
         [...this.entities.entries()].sort((entryA, entryB) => {
             const a = entryA[1], b = entryB[1];
@@ -62,6 +63,7 @@ export class CanvasKitGame{
     * @param {Color} color - Background color of the canvas.
     * @returns {number} - Time taken to draw the frame (ms).
     */
+   count = 0
     drawFrame(color: Color = new Color(0,0,0)){
         const timerStart = performance.now()
         const draw = this.draw
@@ -85,7 +87,8 @@ export class CanvasKitGame{
         const p1 = performance.now();
         this.onNewFrameEvents.map(f => f())
         const p2 = performance.now()
-        console.log(`Sim time: ${p2-p1}`)
+        this.count += p2-p1
+        console.log(`Avg Sim time: ${Math.round(this.count/this.frameCount*100)/100}ms`)
         this.frameCount++
         const timerEnd = performance.now();
         this.deltaTime = timerEnd - this.previousFrameTime
@@ -98,8 +101,8 @@ export class CanvasKitGame{
     newRectangleData(tag: string, x: number, y: number, width: number = 50, height: number = 50, fill: boolean = true, 
         color: Color = new Color(255,255,255), rotationAngle: number = 0, scale: number = 1, borderWidth: number = 1){
         const rectangleData = new RectangleData(tag, x, y, width, height, fill, color, borderWidth, rotationAngle, scale)
-        this.entities.set(tag, rectangleData) 
-        this.sortZIndex()
+        this.entities.set(tag, rectangleData);
+        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
         return rectangleData
     }
      /**
@@ -108,8 +111,8 @@ export class CanvasKitGame{
     newCircleData(tag: string, x: number, y: number, radius: number = 10, fill: boolean = true,
         color: Color = new Color(255,255,255),scale: number = 1, lineWidth: number = 1){
         const circleData = new CircleData(tag, x, y, radius, fill, color, scale, lineWidth);
-        this.entities.set(tag, circleData)
-        this.sortZIndex()
+        this.entities.set(tag, circleData);
+        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
         return circleData
     }
     /**
@@ -118,8 +121,8 @@ export class CanvasKitGame{
     newTextData(tag: string, x: number, y: number, text: string, fontSize: number = 10, color: Color = new Color(255,255,255),
         HorAllign: HorizontalAllign = HorizontalAllign.center, VertAllign: VerticleAllign = VerticleAllign.middle, rotationAngle: number = 1){
         const textData = new TextData(tag, x, y, text, fontSize, color, HorAllign, VertAllign, rotationAngle);
-        this.entities.set(tag, textData)
-        this.sortZIndex()
+        this.entities.set(tag, textData);
+        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
         return textData
     }
      /**
@@ -128,8 +131,8 @@ export class CanvasKitGame{
     newLineData(tag: string, sx: number, sy: number, ex: number, ey: number, lineThickness: number = 1,
         color: Color = new Color(255,255,255)){
         const lineData = new LineData(tag, sx, sy, ex, ey, lineThickness, color);
-        this.entities.set(tag, lineData)
-        this.sortZIndex()
+        this.entities.set(tag, lineData);
+        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
         return lineData
     }
     /**
@@ -140,8 +143,8 @@ export class CanvasKitGame{
         await this.draw.registerImage(filePath, tag)
         imageData.width = this.draw.images[tag].width
         imageData.height = this.draw.images[tag].height
-        this.entities.set(tag, imageData)
-        this.sortZIndex()
+        this.entities.set(tag, imageData);
+        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
         return imageData
     }
     private handleMouseMove(e: MouseEvent){
