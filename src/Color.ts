@@ -15,4 +15,7 @@ export class Color{
     getColor(){
       return "rgb(" + this.r + "," + this.g + "," + this.b + ")"
     }
+    static getRandomColor(){
+      return new Color(Math.random()*255,Math.random()*255,Math.random()*255)
+    }
 }

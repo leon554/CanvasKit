@@ -35,7 +35,7 @@ export class CanvasKitGame{
     */
     removeAnimations(tag: string){
         if(!this.entities.has(tag)) return
-        //this.entities.get(tag)!._animations = []
+        this.entities.get(tag)!._animations = []
     }
     /**
     * Sets the z-index of a shape, shapes with a higher z-index will be rendered above shapes with a smaller z-index
@@ -88,7 +88,6 @@ export class CanvasKitGame{
         this.onNewFrameEvents.map(f => f())
         const p2 = performance.now()
         this.count += p2-p1
-        console.log(`Avg Sim time: ${Math.round(this.count/this.frameCount*100)/100}ms`)
         this.frameCount++
         const timerEnd = performance.now();
         this.deltaTime = timerEnd - this.previousFrameTime
@@ -207,7 +206,6 @@ export class CanvasKitGame{
 
 
 export type ShapeData = RectangleData | CircleData | TextData | LineData | ImageData 
-export type ShapeType = 'rectangle' | 'circle' | 'text' | 'line' | 'image';
 
 abstract class BaseShapeData{
     x: number = 0
@@ -228,7 +226,6 @@ abstract class BaseShapeData{
     public abstract isPointInsideShape(x: number, y: number): boolean
 }
 export class RectangleData extends BaseShapeData {
-    type: ShapeType = "rectangle"
     constructor(
         public tag: string,
         public x: number,
@@ -268,7 +265,6 @@ export class RectangleData extends BaseShapeData {
     }
 }
 export class CircleData extends BaseShapeData{
-    type: ShapeType = "circle"
     constructor(
         public tag: string,
         public x: number,
@@ -286,7 +282,6 @@ export class CircleData extends BaseShapeData{
     }
 }
 class TextData extends BaseShapeData{
-    type: ShapeType = "text"
     constructor(
         public tag: string,
         public x: number,
@@ -303,7 +298,6 @@ class TextData extends BaseShapeData{
     }
 }
 class LineData extends BaseShapeData{
-    type: ShapeType = "line"
     constructor(
         public tag: string,
         public sx: number,
@@ -318,7 +312,6 @@ class LineData extends BaseShapeData{
     }
 }
 export class ImageData extends BaseShapeData{
-    type: ShapeType = "image"
     public width: number = 0
     public height: number = 0
     constructor(
