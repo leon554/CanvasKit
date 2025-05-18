@@ -10,6 +10,7 @@ export class ParticleEmitter{
     particles: Particle[] = []
     ckg: CanvasKitGame
     totalParticleCount: number = 0
+    active: boolean = true
     private currentParticleIndex: number = 0
 
     constructor(postion: Vector2D, particlesPerSec: number, ckg: CanvasKitGame, particleProps: ParticleEmitterProps){
@@ -65,6 +66,7 @@ export class ParticleEmitter{
         if(timeDelta < 1000/this.particlesPerSec) return
         this.timeSinceLastSpawn = currentTime
 
+        if(!this.active) return
         this.createNewParticle(currentTime)
     }
     private createNewParticle(currentTime: number){
@@ -93,6 +95,13 @@ export class ParticleEmitter{
     }
     private incrementParicleIndex(){
         (this.currentParticleIndex < this.totalParticleCount-1) ? this.currentParticleIndex++ : this.currentParticleIndex = 0
+    }
+    deactivateEmitter(){
+        this.currentParticleIndex = 0
+        this.active =false
+    }
+    activateEmitter(){
+        this.active = true
     }
 }
 

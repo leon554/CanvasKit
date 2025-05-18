@@ -10,10 +10,10 @@ class BaseParticleProps{
     x: number = 0;
     y: number = 0;
 
-    velocity: Vector2D = { x: Math.random() * 4 - 2, y: -2};
-    velocityVariation: Vector2D = {x: 4, y: 4}
+    velocity: Vector2D = { x: 0, y: -2};
+    velocityVariation: Vector2D = {x: 4, y: 0}
     gravity: Vector2D = { x: 0, y: 0.1 };
-    gravityVariation: Vector2D = { x: 0.1, y: 0.1 };
+    gravityVariation: Vector2D = { x: 0, y: 0 };
 
     startScale: number = 1
     endScale: number = 2
