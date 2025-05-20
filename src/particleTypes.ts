@@ -39,7 +39,7 @@ export class CircleParticleProps extends BaseParticleProps {
     raduis: number = 10
     fill: boolean = true;
 
-    constructor(props: Partial<RectangleParticleProps> = {}) {
+    constructor(props: Partial<CircleParticleProps> = {}) {
         super()
         Object.assign(this, props);
     }

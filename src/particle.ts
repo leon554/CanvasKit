@@ -2,6 +2,10 @@ import { Vector2D, RectangleData, ShapeData, ImageData, CanvasKitGame, CircleDat
 import { Color } from "./Color";
 import { CircleParticleProps, ImageParticleProps, ParticleEmitterProps, RectangleParticleProps } from "./particleTypes";
 
+export type ParticleEmitterFlags = {
+    burstMode: boolean,
+    useCircularVariation: boolean
+}
 export class ParticleEmitter{
     postion: Vector2D
     particlesPerSec: number
@@ -10,6 +14,10 @@ export class ParticleEmitter{
     particles: Particle[] = []
     ckg: CanvasKitGame
     totalParticleCount: number = 0
+    flags: ParticleEmitterFlags = {
+        burstMode: true,
+        useCircularVariation: false
+    }
     active: boolean = true
     private currentParticleIndex: number = 0
 
@@ -86,9 +94,27 @@ export class ParticleEmitter{
         this.incrementParicleIndex()
     }
     private applyVariation(variation: Vector2D, value: Vector2D){
+        if(this.flags.useCircularVariation){
+            return this.applyCircularVariation(variation, value)
+        }
+        return this.applyUniformVariation(variation, value)
+    }
+    private applyUniformVariation(variation: Vector2D, value: Vector2D){
         const x = value.x + (Math.random() * variation.x - (variation.x/2))
         const y = value.y + (Math.random() * variation.y - (variation.y/2))
         return {x, y}
+    }
+    private applyCircularVariation(variation: Vector2D, value: Vector2D){
+        const speed = Math.sqrt(value.x * value.x + value.y * value.y)
+        const variationHyp = Math.sqrt(variation.x * variation.x + variation.y * variation.y)
+
+        const angle = Math.random() * 2 * Math.PI; 
+        const radius = speed + (Math.random() * variationHyp - variationHyp / 2); 
+
+        return {
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius
+        };
     }
     private getRandomTag(){
         return `${Math.random()}${Math.random()}${Math.random}`
@@ -98,10 +124,24 @@ export class ParticleEmitter{
     }
     deactivateEmitter(){
         this.currentParticleIndex = 0
-        this.active =false
+        this.active = false
     }
     activateEmitter(){
         this.active = true
+    }
+    burst(){
+        if(!this.flags.burstMode) throw new Error("burstMode must be true to use this function")
+        for(let i = 0; i < this.particlesPerSec;i++){
+            this.createNewParticle(Date.now())
+        }
+    }
+    updateParticleData(){
+        this.particles.forEach((p, _)=> {
+            p.startColor = this.particleProps.startColor
+            p.endColor = this.particleProps.endColor
+            p.startScale = this.particleProps.startScale
+            p.endScale = this.particleProps.endScale
+        })
     }
 }
 
