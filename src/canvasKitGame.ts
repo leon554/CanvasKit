@@ -1,7 +1,6 @@
 import { Color } from "./Color"
 import { HorizontalAllign, VerticleAllign, type CanvasKit } from "./canvasKit"
 import { Animation } from "./animation";
-import { Particle } from "./particle";
 
 
 export class CanvasKitGame{
@@ -276,7 +275,7 @@ export class CircleData extends BaseShapeData{
         public lineWidth: number = 1
     ) {super();}
     public isPointInsideShape(x: number, y: number){
-        console.log("ran")
+        //make it so its not checkl every frame
         const dist = Math.sqrt(Math.pow(x-this.x, 2)+ Math.pow(y-this.y, 2))
         return (dist <= this.radius) ? true : false
     }

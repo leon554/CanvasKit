@@ -4,7 +4,8 @@ import { CircleParticleProps, ImageParticleProps, ParticleEmitterProps, Rectangl
 
 export type ParticleEmitterFlags = {
     burstMode: boolean,
-    useCircularVariation: boolean
+    useCircularVariation: boolean,
+    randomColoredParticles: boolean
 }
 export class ParticleEmitter{
     postion: Vector2D
@@ -16,12 +17,14 @@ export class ParticleEmitter{
     totalParticleCount: number = 0
     flags: ParticleEmitterFlags = {
         burstMode: true,
-        useCircularVariation: false
+        useCircularVariation: false,
+        randomColoredParticles: false
     }
     active: boolean = true
     private currentParticleIndex: number = 0
+    private delayDelete = false
 
-    constructor(postion: Vector2D, particlesPerSec: number, ckg: CanvasKitGame, particleProps: ParticleEmitterProps){
+    constructor(postion: Vector2D, particlesPerSec: number, ckg: CanvasKitGame,  particleProps: ParticleEmitterProps){
         this.postion = postion
         this.particlesPerSec = particlesPerSec
         this.particleProps = particleProps
@@ -53,22 +56,35 @@ export class ParticleEmitter{
 
         if(!particleShape) throw new Error("ParticleProps of invalid instance")
         if(!(particleShape instanceof ImageData)){
-            particleShape.color.setColor(this.particleProps.startColor)
+            if(this.flags.randomColoredParticles){
+                particleShape.color = Color.getRandomColor()
+            }else{
+                particleShape.color.setColor(this.particleProps.startColor)
+            }
         }
-            
-        const particle = new Particle(particleShape, this.particleProps)
+        const particle = new Particle(particleShape, this.particleProps, this.flags.randomColoredParticles)
         this.particles.push(particle), this.ckg.entities.set(particleShape.tag, particleShape)
         particleShape.show = false, particle.active = false
     }
+    async setBurstParticleCount(particleCount: number){
+        this.deleteSelf()
+        this.totalParticleCount = particleCount
+        await this.loadParticles()
+    }
     spawn(){
+        if(this.particles.length == 0) return
+
+        let isActiveParticles = false
         const currentTime = Date.now()
         this.particles.forEach((p, i)=> {
             if(currentTime - p.timeCreated > p.lifeSpan * 1000){
                 p.active = false, p.shape.show = false
             }else if(p.active){
                 p.step(this.ckg.deltaTime)
+                isActiveParticles = true
             }
         })
+        if(!isActiveParticles && this.delayDelete) this.deleteSelf()
 
         const timeDelta = currentTime - this.timeSinceLastSpawn
         if(timeDelta < 1000/this.particlesPerSec) return
@@ -79,6 +95,7 @@ export class ParticleEmitter{
     }
     private createNewParticle(currentTime: number){
         const newParticle = this.particles[this.currentParticleIndex]
+        newParticle.randomColor = this.flags.randomColoredParticles
         newParticle.active = true, newParticle.shape.show = true
         newParticle.shape.x = this.postion.x
         newParticle.shape.y = this.postion.y
@@ -86,12 +103,47 @@ export class ParticleEmitter{
         
         newParticle.velocity = this.applyVariation(this.particleProps.velocityVariation, this.particleProps.velocity)
         if(!(newParticle.shape instanceof ImageData)){
-            newParticle.shape.color.setColor(this.particleProps.startColor)
+            if(this.flags.randomColoredParticles){
+                newParticle.shape.color = (Color.getRandomColor())
+            }else{
+                newParticle.shape.color.setColor(this.particleProps.startColor)
+            }
         }
         if(newParticle.shape instanceof RectangleData || newParticle.shape instanceof ImageData || newParticle.shape instanceof CircleData){
             newParticle.shape.scale = this.particleProps.startScale
         }
         this.incrementParicleIndex()
+    }
+    deactivateEmitter(){
+        this.currentParticleIndex = 0
+        this.active = false
+    }
+    deleteSelf(){
+        this.particles.forEach(p => {
+            this.ckg.removeShapeData(p.shape.tag)
+        })
+        this.particles = []
+    }
+    deleteSelfWhenFinished(){
+        this.active = false
+        this.delayDelete = true
+    }
+    activateEmitter(){
+        this.active = true
+    }
+    burst(){
+        if(!this.flags.burstMode) throw new Error("burstMode must be true to use this function")
+        for(let i = 0; i < this.totalParticleCount;i++){
+            this.createNewParticle(Date.now())
+        }
+    }
+    refreshParticlePropsData(){
+        this.particles.forEach((p, _)=> {
+            p.startColor = this.particleProps.startColor
+            p.endColor = this.particleProps.endColor
+            p.startScale = this.particleProps.startScale
+            p.endScale = this.particleProps.endScale
+        })
     }
     private applyVariation(variation: Vector2D, value: Vector2D){
         if(this.flags.useCircularVariation){
@@ -122,55 +174,36 @@ export class ParticleEmitter{
     private incrementParicleIndex(){
         (this.currentParticleIndex < this.totalParticleCount-1) ? this.currentParticleIndex++ : this.currentParticleIndex = 0
     }
-    deactivateEmitter(){
-        this.currentParticleIndex = 0
-        this.active = false
-    }
-    activateEmitter(){
-        this.active = true
-    }
-    burst(){
-        if(!this.flags.burstMode) throw new Error("burstMode must be true to use this function")
-        for(let i = 0; i < this.particlesPerSec;i++){
-            this.createNewParticle(Date.now())
-        }
-    }
-    updateParticleData(){
-        this.particles.forEach((p, _)=> {
-            p.startColor = this.particleProps.startColor
-            p.endColor = this.particleProps.endColor
-            p.startScale = this.particleProps.startScale
-            p.endScale = this.particleProps.endScale
-        })
-    }
 }
 
-export class Particle{
-    velocity: Vector2D
-    angularVelocity: number
-    gravity: Vector2D
+class Particle{
+    velocity!: Vector2D
+    angularVelocity!: number
+    gravity!: Vector2D
     shape: ShapeData
     timeCreated: number
-    lifeSpan: number
+    lifeSpan!: number
     active: boolean = true
     z: number= 0
-    startColor: Color
-    endColor: Color
-    startScale: number
-    endScale: number
+    startColor!: Color
+    endColor!: Color
+    startScale!: number
+    endScale!: number
+    randomColor: boolean
 
-    constructor(particleShape: ShapeData, particleProps: ParticleEmitterProps){
+    constructor(particleShape: ShapeData, particleProps: ParticleEmitterProps, randomColor: boolean){
         this.shape = particleShape
-        this.velocity = {...particleProps.velocity}
-        this.gravity = {...particleProps.gravity}
-        this.angularVelocity = (!(particleProps instanceof CircleParticleProps)) ? particleProps.angularVelocity : 0
-        this.lifeSpan = particleProps.lifeSpan
         this.timeCreated = Date.now()
+        this.randomColor = randomColor
         this.startColor = particleProps.startColor
         this.endColor = particleProps.endColor
         this.startScale = particleProps.startScale
         this.endScale = particleProps.endScale
-    }
+        this.velocity = {...particleProps.velocity}
+        this.gravity = {...particleProps.gravity}
+        this.angularVelocity = (!(particleProps instanceof CircleParticleProps)) ? particleProps.angularVelocity : 0
+        this.lifeSpan = particleProps.lifeSpan
+    } 
 
     step(deltaTime: number){
         if(!this.active) return 
@@ -182,11 +215,6 @@ export class Particle{
         this.velocity.y += this.gravity.y * deltaTime
 
         const progress = Math.min(1, (Date.now() - this.timeCreated) / (this.lifeSpan * 1000));
-        if(!(this.shape instanceof ImageData)){
-            this.shape.color.r = this.startColor.r + (this.endColor.r - this.startColor.r) * progress;
-            this.shape.color.g = this.startColor.g + (this.endColor.g - this.startColor.g) * progress;
-            this.shape.color.b = this.startColor.b + (this.endColor.b - this.startColor.b) * progress;
-        }
 
         if(this.shape instanceof RectangleData || this.shape instanceof ImageData){
             this.shape.rotationAngle += this.angularVelocity
@@ -194,6 +222,12 @@ export class Particle{
         if(this.shape instanceof RectangleData || this.shape instanceof ImageData || this.shape instanceof CircleData){
             this.shape.scale = this.startScale + (this.endScale - this.startScale) * progress
         }
-
+        if(this.randomColor) return
+        if(!(this.shape instanceof ImageData)){
+            this.shape.color.r = this.startColor.r + (this.endColor.r - this.startColor.r) * progress;
+            this.shape.color.g = this.startColor.g + (this.endColor.g - this.startColor.g) * progress;
+            this.shape.color.b = this.startColor.b + (this.endColor.b - this.startColor.b) * progress;
+        }
+        
     }
 }
