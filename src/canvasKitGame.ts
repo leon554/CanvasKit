@@ -9,8 +9,8 @@ export class CanvasKitGame{
     draw: CanvasKit
     mousePosition: Vector2D = {x: 0, y: 0}
     deltaTime: number = 0
-    onNewFrameEvents: Array<()=>void> = []
     sortZOnNewShapeCreation: boolean = true
+    private onNewFrameEvents: Map<string, () => void> = new Map();
     private previousFrameTime: number = 0
 
     constructor(drawInstance: CanvasKit){
@@ -53,8 +53,11 @@ export class CanvasKitGame{
             return a.z - b.z;
         }));
     }
-    addFrameEvent(func: () => void){
-        this.onNewFrameEvents.push(func)
+    addFrameEvent(tag: string, func: () => void){
+        this.onNewFrameEvents.set(tag, func)
+    }
+    removeFrameEvent(tag: string){
+        this.onNewFrameEvents.delete(tag)
     }
     /**
     * Draws a new frame with all the shapes added so far.
@@ -84,7 +87,7 @@ export class CanvasKitGame{
             this.handleAnimationStep(sd)
         }
         const p1 = performance.now();
-        this.onNewFrameEvents.map(f => f())
+        Array.from(this.onNewFrameEvents.values()).map(f => f())
         const p2 = performance.now()
         this.count += p2-p1
         this.frameCount++
@@ -200,6 +203,9 @@ export class CanvasKitGame{
                 break;
             }
         }
+    }
+    public getRandomTag(){
+        return crypto.randomUUID?.() || Math.random().toString(36).slice(2)
     }
 }
 

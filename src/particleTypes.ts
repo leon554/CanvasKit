@@ -1,12 +1,11 @@
-import { Vector2D} from "./canvasKitGame";
+import { CanvasKitGame, ShapeData, Vector2D} from "./canvasKitGame";
 import { Color } from "./Color";
 
 
 
 export type ParticleEmitterProps = RectangleParticleProps | CircleParticleProps | ImageParticleProps
 
-
-class BaseParticleProps{
+abstract class BaseParticleProps{
     x: number = 0;
     y: number = 0;
 
@@ -22,6 +21,8 @@ class BaseParticleProps{
     endColor: Color = new Color(0,0,255);
 
     lifeSpan: number = 2;
+
+    abstract createShape(ckg: CanvasKitGame, position: Vector2D): Promise<ShapeData> | ShapeData
 }
 export class RectangleParticleProps extends BaseParticleProps {
     width: number = 10;
@@ -34,6 +35,9 @@ export class RectangleParticleProps extends BaseParticleProps {
         super()
         Object.assign(this, props);
     }
+    createShape(ckg: CanvasKitGame, position: Vector2D){
+        return ckg.newRectangleData(ckg.getRandomTag(), position.x, position.y, this.width, this.height, this.fill, undefined, this.rotationAngle)
+    }
 }
 export class CircleParticleProps extends BaseParticleProps {
     raduis: number = 10
@@ -42,6 +46,9 @@ export class CircleParticleProps extends BaseParticleProps {
     constructor(props: Partial<CircleParticleProps> = {}) {
         super()
         Object.assign(this, props);
+    }
+    createShape(ckg: CanvasKitGame, position: Vector2D) {
+        return ckg.newCircleData(ckg.getRandomTag(), position.x, position.y, this.raduis, this.fill, undefined)
     }
 }
 export class ImageParticleProps extends BaseParticleProps {
@@ -58,5 +65,8 @@ export class ImageParticleProps extends BaseParticleProps {
             throw new Error("Must specify file path in reletive form")
         }
         Object.assign(this, props);
+    }
+    async createShape(ckg: CanvasKitGame, position: Vector2D){
+        return await ckg.newImageData(ckg.getRandomTag(), this.filePath, position.x, position.y, 0.1, this.rotationAngle)
     }
 }
