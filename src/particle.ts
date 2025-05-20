@@ -66,12 +66,17 @@ export class ParticleEmitter{
         this.particles.push(particle), this.ckg.entities.set(particleShape.tag, particleShape)
         particleShape.show = false, particle.active = false
     }
+    /**
+    * Sets the number of particles emitted when the burstMode flag is true
+    *
+    * @param {number} particleCount - Number of particles emitted
+    */
     async setBurstParticleCount(particleCount: number){
         this.deleteSelf()
         this.totalParticleCount = particleCount
         await this.loadParticles()
     }
-    spawn(){
+    private spawn(){
         if(this.particles.length == 0) return
 
         let isActiveParticles = false
@@ -114,29 +119,50 @@ export class ParticleEmitter{
         }
         this.incrementParicleIndex()
     }
+    /**
+    * Deactivates the emitter. It will no longer emit new particles and will wait for all 
+    * currently active particles to finish their lifespan.
+    */
     deactivateEmitter(){
         this.currentParticleIndex = 0
         this.active = false
     }
+    /**
+    * Immediately removes all particles from the render list. Cannot activate this emitter again.
+    */
     deleteSelf(){
         this.particles.forEach(p => {
             this.ckg.removeShapeData(p.shape.tag)
         })
         this.particles = []
     }
+    /**
+    * Waits until all currently active particles have finished, then removes all particles from the render list.
+    * Note: After this function is called, you cannot activate this emitter again.
+    */
     deleteSelfWhenFinished(){
         this.active = false
         this.delayDelete = true
     }
+    /**
+    * Reactivates the emitter after deactivateEmitter() is called.
+    */
     activateEmitter(){
         this.active = true
     }
+    /**
+    * Emits a burst particle effect if the burstMode flag is true.
+    */
     burst(){
         if(!this.flags.burstMode) throw new Error("burstMode must be true to use this function")
         for(let i = 0; i < this.totalParticleCount;i++){
             this.createNewParticle(Date.now())
         }
     }
+    /**
+    * Updates the particleProps object if changes occurred. 
+    * Note: Only updates startColor, endColor, startScale, and endScale.
+    */
     refreshParticlePropsData(){
         this.particles.forEach((p, _)=> {
             p.startColor = this.particleProps.startColor
