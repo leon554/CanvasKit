@@ -34,7 +34,7 @@ export class Animation{
     step(deltaTime: number) {
         this.elapsedTime += deltaTime;
 
-        const t = Math.min(this.elapsedTime / this.duration, 1); // Clamp between 0 and 1
+        const t = Math.min(this.elapsedTime / this.duration, 1);
         let easedT = t
         switch(this.easingType){
             case "linear":

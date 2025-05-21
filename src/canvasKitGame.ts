@@ -1,6 +1,7 @@
 import { Color } from "./Color"
 import { HorizontalAllign, VerticleAllign, type CanvasKit } from "./canvasKit"
 import { Animation } from "./animation";
+import { AnimationHandler } from "./animationHandler";
 
 
 export class CanvasKitGame{
@@ -26,6 +27,7 @@ export class CanvasKitGame{
     removeShapeData(tag: string){
         if(!this.entities.has(tag)) return false
         this.entities.delete(tag)
+        return true
     }
     /**
     * Removes any animation object on a given shape
@@ -65,14 +67,12 @@ export class CanvasKitGame{
     * @param {Color} color - Background color of the canvas.
     * @returns {number} - Time taken to draw the frame (ms).
     */
-   count = 0
     drawFrame(color: Color = new Color(0,0,0)){
         const timerStart = performance.now()
         const draw = this.draw
         this.draw.fillCanvas(color)
         for(let sd of this.entities.values()){
             if(!sd.show) continue
-            
             if (sd instanceof RectangleData) {
                 draw.rectangle(sd.x, sd.y, sd.width, sd.height, sd.fill, sd.color, sd.borderWidth, sd.rotationAngle, sd.scale);
             } else if (sd instanceof CircleData) {
@@ -84,16 +84,13 @@ export class CanvasKitGame{
             } else if (sd instanceof ImageData) {
                 draw.image(sd.tag, sd.x, sd.y, sd.scale, sd.rotationAngle);
             }
-            this.handleAnimationStep(sd)
+            AnimationHandler.handleAnimationStep(sd, this.deltaTime)
         }
-        const p1 = performance.now();
         Array.from(this.onNewFrameEvents.values()).map(f => f())
-        const p2 = performance.now()
-        this.count += p2-p1
         this.frameCount++
         const timerEnd = performance.now();
         this.deltaTime = timerEnd - this.previousFrameTime
-        this.previousFrameTime = performance.now()
+        this.previousFrameTime = timerEnd
         return timerEnd - timerStart
     }
     /**
@@ -102,8 +99,7 @@ export class CanvasKitGame{
     newRectangleData(tag: string, x: number, y: number, width: number = 50, height: number = 50, fill: boolean = true, 
         color: Color = new Color(255,255,255), rotationAngle: number = 0, scale: number = 1, borderWidth: number = 1){
         const rectangleData = new RectangleData(tag, x, y, width, height, fill, color, borderWidth, rotationAngle, scale)
-        this.entities.set(tag, rectangleData);
-        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
+        this.registerShape(tag, rectangleData)
         return rectangleData
     }
      /**
@@ -112,8 +108,7 @@ export class CanvasKitGame{
     newCircleData(tag: string, x: number, y: number, radius: number = 10, fill: boolean = true,
         color: Color = new Color(255,255,255),scale: number = 1, lineWidth: number = 1){
         const circleData = new CircleData(tag, x, y, radius, fill, color, scale, lineWidth);
-        this.entities.set(tag, circleData);
-        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
+        this.registerShape(tag, circleData)
         return circleData
     }
     /**
@@ -122,8 +117,7 @@ export class CanvasKitGame{
     newTextData(tag: string, x: number, y: number, text: string, fontSize: number = 10, color: Color = new Color(255,255,255),
         HorAllign: HorizontalAllign = HorizontalAllign.center, VertAllign: VerticleAllign = VerticleAllign.middle, rotationAngle: number = 1){
         const textData = new TextData(tag, x, y, text, fontSize, color, HorAllign, VertAllign, rotationAngle);
-        this.entities.set(tag, textData);
-        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
+        this.registerShape(tag, textData)
         return textData
     }
      /**
@@ -132,8 +126,7 @@ export class CanvasKitGame{
     newLineData(tag: string, sx: number, sy: number, ex: number, ey: number, lineThickness: number = 1,
         color: Color = new Color(255,255,255)){
         const lineData = new LineData(tag, sx, sy, ex, ey, lineThickness, color);
-        this.entities.set(tag, lineData);
-        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
+        this.registerShape(tag, lineData)
         return lineData
     }
     /**
@@ -144,16 +137,21 @@ export class CanvasKitGame{
         await this.draw.registerImage(filePath, tag)
         imageData.width = this.draw.images[tag].width
         imageData.height = this.draw.images[tag].height
-        this.entities.set(tag, imageData);
-        (this.sortZOnNewShapeCreation) ? this.sortZIndex() : ""
+        this.registerShape(tag, imageData)
         return imageData
     }
+    private registerShape(tag: string, shape: ShapeData){
+        this.entities.set(tag, shape);
+        if (this.sortZOnNewShapeCreation) this.sortZIndex();
+    }
+    
     private handleMouseMove(e: MouseEvent){
         const rect = this.draw.canvas.getBoundingClientRect(); 
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         this.mousePosition = {x, y}
         for(const shape of this.entities.values()){
+            if(shape.onHoverEnter == undefined && shape.onHoverExit == undefined) continue
             if(!shape.isPointInsideShape(this.mousePosition.x, this.mousePosition.y)){
                 shape._hoverState = (shape._hoverState == 2) ? 1 : 0
                 if(shape._hoverState == 1) shape.onHoverExit?.()
@@ -167,41 +165,6 @@ export class CanvasKitGame{
         for(const shape of this.entities.values()){
             if(!shape.isPointInsideShape(this.mousePosition.x, this.mousePosition.y))continue
             shape.onClick?.()
-        }
-    }
-    private handleAnimationStep(shape: ShapeData){
-        if(!shape._animations) return
-        if(shape._animations.length == 0) return
-        if(shape._animations[0].isAnimationComplete()){
-            if(shape._animations[0].loop){
-                shape._animations[0].elapsedTime = 0
-                for(let i = 0; i < shape._animations[0].startPropValues.length; i++){
-                    shape._animations[0].targetPropValues[i] = shape._animations[0].startPropValues[i]
-                    shape._animations[0].startPropValues[i] = shape._animations[0].currentPropValues[i]
-                }
-            }else{
-                shape._animations.shift()
-                return
-            }
-        }
-        shape._animations[0].step(this.deltaTime)
-        for(let i = 0; i < shape._animations[0].targetPropValues.length; i++){
-            switch(shape._animations[0].propNames[i]){
-                case "x":
-                    shape.x = shape._animations[0].currentPropValues[i]
-                break;
-                case "y":
-                    shape.y = shape._animations[0].currentPropValues[i]
-                break;
-                case "scale":
-                    if(shape instanceof TextData || shape instanceof LineData) continue
-                    shape.scale = shape._animations[0].currentPropValues[i]
-                break
-                case "rotation":
-                    if(shape instanceof CircleData || shape instanceof LineData) continue
-                    shape.rotationAngle = shape._animations[0].currentPropValues[i]
-                break;
-            }
         }
     }
     public getRandomTag(){
@@ -281,12 +244,11 @@ export class CircleData extends BaseShapeData{
         public lineWidth: number = 1
     ) {super();}
     public isPointInsideShape(x: number, y: number){
-        //make it so its not checkl every frame
         const dist = Math.sqrt(Math.pow(x-this.x, 2)+ Math.pow(y-this.y, 2))
         return (dist <= this.radius) ? true : false
     }
 }
-class TextData extends BaseShapeData{
+export class TextData extends BaseShapeData{
     constructor(
         public tag: string,
         public x: number,
@@ -302,7 +264,7 @@ class TextData extends BaseShapeData{
         return false
     }
 }
-class LineData extends BaseShapeData{
+export class LineData extends BaseShapeData{
     constructor(
         public tag: string,
         public sx: number,
