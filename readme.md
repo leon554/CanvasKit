@@ -1,5 +1,5 @@
 # **CanvasKit**
-CanvasKit is a light weight simple HTML Canvas wrapper which provides an simple interface to create complex graphics and dynamic scenes
+CanvasKit is a light weight HTML Canvas wrapper which provides an simple interface to create complex graphics and dynamic scenes
 ## Installation
 To use in your project run 
 ```
@@ -22,11 +22,12 @@ CanvasKitGame extends canvasKit providing more functionality. Instead of drawing
 - Events (onClick, OnHoverEnter and OnHoverExit)
 - Z-index render order
 - Tag system
+- Keyboard Inputs And Events
+- Particle System
 
 **Example**
 ```typescript
-const ck = new CanvasKit("canvas", 500, 500)
-const ckg = new CanvasKitGame(ck)
+const ckg = new CanvasKitGame(new CanvasKit("canvas", 500, 500))
 
 const r1 = ckg.newRectangleData("r1", 0, 200)
 r1.addAnimation(new Animation([0, 1, 0], [440, 1.3, 360], ["x", "scale", "rotation"], "easeOut", 1, true))
@@ -49,7 +50,7 @@ const ck = new CanvasKit("canvasID", 500, 500)
 ```typescript
 ck.rectangle(100, 100, 40, 40, true, new Color(0,0,0), 1, 45, 1)
 ```
-### CanvasKitGame
+### CanvasKitGame-Animation Example
 To create a circle that depresses when you click on it and springs back we need to:
 1. Create a new CanvasKitGame instance which takes in a CanvasKit instance
 ```typescript
@@ -65,7 +66,7 @@ r1.onClick = () => {
 
 }
 ```
-4. Now we can add our animations
+4. Now we can add our animations the first parameter is an array of the start values where out animation will start. The second parameter is an array of the end values of our animation with the third parameter specifing what each value represenets such as "scale", "x", "y" and/or "rotation"
 ```typescript
  r1.onClick = () => {
   r1.addAnimation(new Animation([1], [0.8], ["scale"], "linear", 0.1, false))
@@ -89,50 +90,84 @@ function loop(){
 }
 loop() 
 ```
-## API Reference
-**CanvasKit Methods**
+### CanvasKitGame-Particle Example
+To create a confetti effect we can do the following:
 
-`clear()`
+1. Create a new CanvasKitGame instance which takes in a CanvasKit instance
+```typescript
+const ckg = new CanvasKitGame(new CanvasKit("canvas", 500, 500))
+``` 
+2. Create a new ParticleEmitterProps instance which can be any one of the following: `RectangleParticleProps`, `CircleParticleProps` or `ImageParticleProps` each one has unique properties associated with the given shape.
+```typescript
+const particleProps = new RectangleParticleProps({
+  gravity: {x: 0, y: 0.03},
+  velocityVariation: {x: 1.5, y: 0},
+  width: 7,
+  height: 2,
+  angularVelocity: 4
+})
+```
+3. We can now create a ParitlceEmmiter and pass in a position, particlesPerSecond and the particleProps we just created. We can also set the randomColoredParticle flag to true so our effect will look more like confetti.
+```typescript
+const pe = new ParticleEmitter({x: 250, y: 250}, 50, ckg, particleProps)
+pe.flags.randomColoredParticles = true 
+```
+4. Finally we can just call the `drawFrame()` method. Our final code should look like this 
+```typescript
+import { CanvasKit, CanvasKitGame, ParticleEmitter, RectangleParticleProps } from "canvaskitgame"
 
-`fillCanvas(color: Color)`
+const ckg = new CanvasKitGame(new CanvasKit("canvas", 500, 500))
 
-`line(sx: number, sy: number, ex: number, ey: number, color: Color, lineWidth: number = 1)`
+const particleProps = new RectangleParticleProps({
+  gravity: {x: 0, y: 0.03},
+  velocityVariation: {x: 1.5, y: 0},
+  width: 7,
+  height: 2,
+  angularVelocity: 4
+})
+const pe = new ParticleEmitter({x: 250, y: 250}, 50, ckg, particleProps)
+pe.flags.randomColoredParticles = true 
 
-`circle(x: number, y:number, r:number, fill: boolean = true, color: Color, lineWidth: number = 1, scale: number = 1)`
+function loop(){
 
-`arc(x: number, y:number, r:number, fill: boolean = true, color: Color, lineWidth: number = 1, startAngle: number, endAngle: number)`
+  ckg.drawFrame()
+  requestAnimationFrame(loop)
+}
+loop() 
+```
+5. Aditionally we can also create a burst affect that happens every time a key is pressed with the following code
+```typescript
+import { CanvasKit, CanvasKitGame, ParticleEmitter, RectangleParticleProps } from "canvaskitgame"
 
-`rectangle(x: number, y: number, width: number, height: number, fill: boolean = true, color: Color, borderWidth: number =  1, rotationAngle: number = 0, scale: number = 1)`
+const ckg = new CanvasKitGame(new CanvasKit("canvas", 500, 500))
 
-`async registerImage(imgPath: string, imageTag: string)`
+const particleProps = new RectangleParticleProps({
+  gravity: {x: 0, y: 0.03},
+  velocity: {x: 0, y: 0},
+  velocityVariation: {x: 8, y: 8},
+  width: 7,
+  height: 2,
+  angularVelocity: 10
+})
+const pe = new ParticleEmitter({x: 250, y: 250}, 50, ckg, particleProps)
+pe.flags.randomColoredParticles = true 
+pe.flags.burstMode = true
+pe.flags.useCircularVariation = true
+pe.setBurstParticleCount(400)
+pe.deactivateEmitter()
 
-`image(imgTag: string, x: number, y: number, scale: number = 1, rotationAngle: number = 0)`
+ckg.keyBoard.addNewKeyPressEvent("t", () => {
+  pe.emitBurst()
+})
 
-`text(text: string, fontSize: number, x: number, y: number, HorAllign: HorizontalAllign = HorizontalAllign.center, VertAllign: VerticleAllign = VerticleAllign.middle,color: Color)`
+function loop(){
 
-`rotatedText(text: string, fontSize: number, x: number, y: number, HorAllign: HorizontalAllign = HorizontalAllign.center, VertAllign: VerticleAllign = VerticleAllign.alphabetic,color: Color, rotationAngle: number)`
+  ckg.drawFrame()
+  requestAnimationFrame(loop)
+}
+loop() 
 
-**CanvisKitGame Methods**
+```
+![burst](https://github.com/user-attachments/assets/c15ceaf2-0009-4289-8753-7708b77f5ed5)
+![Recording 2025-05-22 125743](https://github.com/user-attachments/assets/02e20d7b-19ac-4a86-9c7f-6bb6f25cbdb6)
 
-`removeShapeData(tag: string)`
-
-`removeAnimations(tag: string)`
-
-`setZIndex(tag: string, zIndex: number)`
-
-`drawFrame(color: Color = new Color(0,0,0))`
-
-`newRectangleData(tag: string, x: number, y: number, width: number = 50, height: number = 50, fill: boolean = true, color: Color = new Color(255,255,255), rotationAngle: number = 0, scale: number = 1, borderWidth: number = 1)`
-
-`newCircleData(tag: string, x: number, y: number, radius: number = 10, fill: boolean = true,
-color: Color = new Color(255,255,255),scale: number = 1, lineWidth: number = 1)`
-
-`newTextData(tag: string, x: number, y: number, text: string, fontSize: number = 10, color: Color = new Color(255,255,255)`
-
-`newLineData(tag: string, sx: number, sy: number, ex: number, ey: number, lineThickness: number = 1, color: Color = new Color(255,255,255))`
-
-`async newImageData(tag: string, filePath: string, x: number, y: number, scale: number = 1, rotationAngle: number = 0)`
-
-**Animation Methods**
-
-`isAnimationComplete()`
