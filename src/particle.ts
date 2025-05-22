@@ -124,6 +124,7 @@ export class ParticleEmitter{
             p.endColor = this.particleProps.endColor
             p.startScale = this.particleProps.startScale
             p.endScale = this.particleProps.endScale
+            p.velocity = {...this.applyVariation(this.particleProps.velocityVariation, this.particleProps.velocity)}
         })
     }
 

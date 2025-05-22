@@ -4,3 +4,4 @@ export * from './canvasKitGame'
 export * from './animation'
 export * from './particle'
 export * from "./particleTypes"
+export * from "./keyboardManager"

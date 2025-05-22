@@ -2,6 +2,7 @@ import { Color } from "./Color"
 import { HorizontalAllign, VerticleAllign, type CanvasKit } from "./canvasKit"
 import { Animation } from "./animation";
 import { AnimationHandler } from "./animationHandler";
+import { KeyboardManager } from "./keyboardManager";
 
 
 export class CanvasKitGame{
@@ -11,11 +12,13 @@ export class CanvasKitGame{
     mousePosition: Vector2D = {x: 0, y: 0}
     deltaTime: number = 0
     sortZOnNewShapeCreation: boolean = true
+    keyBoard: KeyboardManager
     private onNewFrameEvents: Map<string, () => void> = new Map();
     private previousFrameTime: number = 0
 
     constructor(drawInstance: CanvasKit){
         this.draw = drawInstance
+        this.keyBoard = new KeyboardManager()
         this.draw.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this))
         this.draw.canvas.addEventListener("mousedown", this.handleMouseDown.bind(this))
     }
@@ -144,7 +147,6 @@ export class CanvasKitGame{
         this.entities.set(tag, shape);
         if (this.sortZOnNewShapeCreation) this.sortZIndex();
     }
-    
     private handleMouseMove(e: MouseEvent){
         const rect = this.draw.canvas.getBoundingClientRect(); 
         const x = e.clientX - rect.left;
