@@ -6,7 +6,6 @@ export class CanvasKit{
     height: number;
     ctx : CanvasRenderingContext2D;
     canvas: HTMLCanvasElement
-    textRotation: number = 0;
     images: {[key: string]: HTMLImageElement} = {}
   
     constructor(canvasID: string, width: number = 500, height: number = 500){
